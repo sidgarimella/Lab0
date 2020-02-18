@@ -41,8 +41,8 @@ def test_teams2():
             assert_not_eliminated(division, team)
         elif team.name == "Detroit":
             assert_eliminated(division, team)
-    print("test_teams2 passed")        
-        
+    print("test_teams2 completed")
+
 def test_teams4():
     '''Runs all test cases on the input matrix that was given in the lab
     description. It is stored in teams4.txt.
@@ -53,7 +53,7 @@ def test_teams4():
             assert_eliminated(division, team)
         elif team.name == "Emily" or team.name == "Shashank":
             assert_not_eliminated(division, team)
-    print("test_teams4 passed")
+    print("test_teams4 completed")
 
 def test_teams7():
     '''Runs all test cases on the input matrix that was given in the lab
@@ -63,10 +63,10 @@ def test_teams7():
     for (ID, team) in division.teams.items():
         if team.name == "Ireland" or team.name == "China":
             assert_eliminated(division, team)
-        elif (team.name == "U.S.A." or team.name == "England" or team.name == "France" 
+        elif (team.name == "U.S.A." or team.name == "England" or team.name == "France"
             or team.name == "Germany" or team.name == "Belgium"):
             assert_not_eliminated(division, team)
-    print("test_teams7 passed")
+    print("test_teams7 completed")
 
 def test_teams24():
     '''Runs all test cases on the input matrix that was given in the lab
@@ -74,18 +74,18 @@ def test_teams24():
     '''
     division = Division("teams24.txt")
     for (ID, team) in division.teams.items():
-        if (team.name == "Team4" or team.name == "Team5" or team.name == "Team7" 
+        if (team.name == "Team4" or team.name == "Team5" or team.name == "Team7"
             or team.name == "Team9" or team.name == "Team11" or team.name == "Team12"
             or team.name == "Team16" or team.name == "Team19" or team.name == "Team23"):
             assert_eliminated(division, team)
-        elif (team.name == "Team0" or team.name == "Team1" or team.name == "Team2" 
+        elif (team.name == "Team0" or team.name == "Team1" or team.name == "Team2"
             or team.name == "Team3" or team.name == "Team6" or team.name == "Team8"
             or team.name == "Team10" or team.name == "Team13" or team.name == "Team14"
-            or team.name == "Team15" or team.name == "Team16" or team.name == "Team17" 
+            or team.name == "Team15" or team.name == "Team16" or team.name == "Team17"
             or team.name == "Team18" or team.name == "Team20" or team.name == "Team21"
             or team.name == "Team22"):
             assert_not_eliminated(division, team)
-    print("test_teams24 passed")
+    print("test_teams24 completed")
 
 if __name__ == '__main__':
     test_teams2()
