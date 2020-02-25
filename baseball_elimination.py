@@ -8,6 +8,7 @@ import picos as pic
 import networkx as nx
 import itertools
 import cvxopt
+import matplotlib.pyplot as plt
 
 
 class Division:
@@ -93,7 +94,22 @@ class Division:
 
         saturated_edges = {}
 
-        #TODO: implement this
+        self.G = nx.DiGraph()
+        self.G.add_node("s")
+        self.G.add_node("t")
+
+        for otherTeamID in self.get_team_IDs():
+            if otherTeamID != teamID:
+                self.G.add_node(otherTeamID)
+                self.G.add_edge(otherTeamID, "t", capacity=(self.teams[teamID].wins + self.teams[teamID].remaining - self.teams[otherTeamID].wins))
+                for otherAgainstTeamID in self.get_team_IDs():
+                    team_pair_id = str(otherTeamID) + "_" + str(otherAgainstTeamID)
+                    if otherTeamID != otherAgainstTeamID and otherAgainstTeamID != teamID and self.teams[otherTeamID].get_against(other_team=otherAgainstTeamID) != 0 and not self.G.has_node('_'.join(team_pair_id.split('_')[::-1])):
+                        self.G.add_node(team_pair_id)
+                        saturated_edges[team_pair_id] = self.teams[otherTeamID].get_against(other_team=otherAgainstTeamID)
+                        self.G.add_edge("s", team_pair_id, capacity=float(saturated_edges[team_pair_id]))
+                        self.G.add_edge(team_pair_id, otherTeamID, capacity=float('inf'))
+                        self.G.add_edge(team_pair_id, otherAgainstTeamID, capacity=float('inf'))
 
         return saturated_edges
 
@@ -108,7 +124,10 @@ class Division:
         return: True if team is eliminated, False otherwise
         '''
 
-        #TODO: implement this
+        flow_dict = nx.maximum_flow(self.G, "s", "t")[1]
+        for t in saturated_edges:
+            if float(saturated_edges[t]) != flow_dict["s"][t]:
+                return True
 
         return False
 
@@ -126,16 +145,73 @@ class Division:
 
         maxflow=pic.Problem()
 
-        #TODO: implement this
+        f={}
+        for e in self.G.edges():
+            f[e]=maxflow.add_variable('f[{0}]'.format(e),1)
 
-        return False
+        F = maxflow.add_variable('F',1)
+        caps = dict(nx.get_edge_attributes(self.G,'capacity'))
 
+        maxflow.add_list_of_constraints(
+          [f[e] < caps[e] for e in self.G.edges()],
+          [('e',2)],
+          'edges'
+        )
+
+        maxflow.add_list_of_constraints(
+          [pic.sum([f[p,i] for p in self.G.predecessors(i)],'p','pred(i)') == pic.sum([f[i,j] for j in self.G.successors(i)],'j','succ(i)') 
+            for i in self.G.nodes() if i not in ('s','t')],
+          'i','nodes-(s,t)'
+        )
+
+        # Set source flow at s.
+        maxflow.add_constraint(
+          pic.sum([f[p,'s'] for p in self.G.predecessors('s')],'p','pred(s)') + F
+          == pic.sum([f['s',j] for j in self.G.successors('s')],'j','succ(s)')
+        )
+
+        # Set sink flow at t.
+        maxflow.add_constraint(
+          pic.sum([f[p,'t'] for p in self.G.predecessors('t')],'p','pred(t)')
+          == pic.sum([f['t',j] for j in self.G.successors('t')],'j','succ(t)') + F
+        )
+
+        # Enforce flow nonnegativity.
+        maxflow.add_list_of_constraints(
+          [f[e]>0 for e in self.G.edges()],
+          [('e',2)],
+          'edges'
+        )
+
+        # Set the objective.
+        maxflow.set_objective('max',F)
+        maxflow.solve(verbose=0,solver='glpk')
+
+        return (int(F) < sum(saturated_edges.values()))
 
     def checkTeam(self, team):
         '''Checks that the team actually exists in this division.
         '''
         if team.ID not in self.get_team_IDs():
             raise ValueError("Team does not exist in given input.")
+
+    def plotNetwork(self, ID):
+        '''Plots the network using a meaningful layout.
+        '''
+        pos = dict()
+        X = self.G.neighbors("s")
+        Y = self.G.reverse(copy=True).neighbors("t")
+        X = list(X)
+        Y = list(Y)
+        pos.update([("s", (1, int(len(list(X))/2)))])
+        pos.update([("t", (4, int(len(list(Y))/2)))])
+        pos.update( [(n, (2, i)) for i, n in enumerate(X)] ) 
+        pos.update( [(n, (3, i)) for i, n in enumerate(Y)] )
+        edge_labels = nx.get_edge_attributes(self.G,'capacity')
+        nx.draw_networkx(self.G, cmap = plt.get_cmap('jet'), pos=pos, font_size=6)
+        nx.draw_networkx_edge_labels(self.G, pos, labels = edge_labels, font_size=6)
+        plt.title("TEAM: " + str(ID))
+        plt.show()
 
     def __str__(self):
         '''Returns pretty string representation of a division object.
@@ -191,5 +267,6 @@ if __name__ == '__main__':
         division = Division(filename)
         for (ID, team) in division.teams.items():
             print(f'{team.name}: Eliminated? {division.is_eliminated(team.ID, "Linear Programming")}')
+            # division.plotNetwork(ID)
     else:
         print("To run this code, please specify an input file name. Example: python baseball_elimination.py teams2.txt.")
